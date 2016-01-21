@@ -1,0 +1,180 @@
+[1mdiff --git a/Dockerfile b/Dockerfile[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/LICENSE b/LICENSE[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/README.md b/README.md[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/docker-compose-single-broker.yml b/docker-compose-single-broker.yml[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/docker-compose.yml b/docker-compose.yml[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/producer.py b/producer.py[m
+[1mindex 2eecdc6..4c794cd 100755[m
+[1m--- a/producer.py[m
+[1m+++ b/producer.py[m
+[36m@@ -12,11 +12,11 @@[m [mkafkaHost, topic = sys.argv[1:][m
+ client = KafkaClient(hosts=kafkaHost)[m
+ [m
+ topicTest = client.topics[topic][m
+[31m-testProducer = topicTest.get_producer()[m
+[32m+[m[32mtestProducer = topicTest.get_producer(linger_ms=11000, min_queued_messages=20)[m
+ [m
+ count = 0[m
+ [m
+[31m-print "Connection established. Sending messages.\n(. = 10 messages)"[m
+[32m+[m[32mprint "Connection established (using pykafka). Sending messages.\n(. = 10 messages)"[m
+ [m
+ while(1):[m
+ 	testProducer.produce('test message %s' % count)[m
+[1mdiff --git a/producerKP.py b/producerKP.py[m
+[1mindex 2eecdc6..067b142 100755[m
+[1m--- a/producerKP.py[m
+[1m+++ b/producerKP.py[m
+[36m@@ -1,6 +1,6 @@[m
+ #!/usr/bin/python[m
+ [m
+[31m-from pykafka import KafkaClient[m
+[32m+[m[32mfrom kafka import SimpleProducer, KafkaClient[m
+ import sys[m
+ import time[m
+ [m
+[36m@@ -9,20 +9,18 @@[m [mif len(sys.argv) != 3:[m
+ 	exit(-1)[m
+ [m
+ kafkaHost, topic = sys.argv[1:][m
+[31m-client = KafkaClient(hosts=kafkaHost)[m
+ [m
+[31m-topicTest = client.topics[topic][m
+[31m-testProducer = topicTest.get_producer()[m
+[32m+[m[32mclient = KafkaClient(hosts=kafkaHost)[m
+[32m+[m[32mproducer = SimpleProducer(client, async=True, batch_send_every_n=20, batch_send_every_t=11)[m
+ [m
+ count = 0[m
+ [m
+[31m-print "Connection established. Sending messages.\n(. = 10 messages)"[m
+[32m+[m[32mprint "Connection established (using kafka-python). Sending messages.\n(. = 10 messages)"[m
+ [m
+ while(1):[m
+[31m-	testProducer.produce('test message %s' % count)[m
+[31m-	count = count+1[m
+[32m+[m	[32mproducer.send_messages(topic, 'test message %s' % count)[m
+[32m+[m	[32mcount += 1[m
+ 	if count % 10:[m
+ 		sys.stdout.write('.')[m
+ 		sys.stdout.flush()[m
+ 	time.sleep(0.7)[m
+[31m-[m
+[1mdiff --git a/scripts/tmp b/scripts/tmp[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/uwsgitest.py b/uwsgitest.py[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex e69de29..ad432de[m
+[1m--- a/uwsgitest.py[m
+[1m+++ b/uwsgitest.py[m
+[36m@@ -0,0 +1,61 @@[m
+[32m+[m[32m#!/usr/bin/python[m
+[32m+[m
+[32m+[m[32m# run with:[m
+[32m+[m[32m# uwsgi --module uwsgitest --master --http-socket :9999 --max-requests 2 --processes 2[m
+[32m+[m[32m# uwsgi --module uwsgitest --master --http-socket :9999 --max-requests 2 --processes 2 --harakiri 1[m
+[32m+[m
+[32m+[m[32mimport time[m
+[32m+[m[32mimport os[m
+[32m+[m[32mimport uwsgi[m
+[32m+[m[32mimport random[m
+[32m+[m[32mimport atexit[m
+[32m+[m[32mimport pprint[m
+[32m+[m[32mimport signal[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef myExit():[m
+[32m+[m	[32mprint "myExit"[m
+[32m+[m
+[32m+[m[32mdef myHandle():[m
+[32m+[m	[32mprint "signal my handle"[m
+[32m+[m	[32mif signal._old:[m
+[32m+[m		[32msignal._old()[m
+[32m+[m
+[32m+[m[32mclass handler(object):[m
+[32m+[m	[32mdef __init__(self):[m
+[32m+[m		[32mself.old = None[m
+[32m+[m
+[32m+[m	[32mdef handle(self):[m
+[32m+[m		[32mprint "Signal handle"[m
+[32m+[m		[32mif(self.old):[m
+[32m+[m			[32mself.old()[m
+[32m+[m
+[32m+[m[32mclass Application(object):[m
+[32m+[m	[32mdef __init__(self):[m
+[32m+[m		[32mself.i = 0[m
+[32m+[m		[32mprint "init!!!", self.i[m
+[32m+[m
+[32m+[m	[32mdef cleanup(self):[m
+[32m+[m		[32mprint "cleanup!!!", self.i[m
+[32m+[m
+[32m+[m	[32mdef __call__(self, env, start_response):[m
+[32m+[m		[32mstart_response('200 OK', [('Content-Type','text/html')])[m
+[32m+[m		[32mself.i += 1[m
+[32m+[m		[32msleep = random.random() * 3[m
+[32m+[m		[32m# pprint.pprint(locals())[m
+[32m+[m		[32mprint os.getpid(), self.i, sleep[m
+[32m+[m
+[32m+[m		[32mtime.sleep(sleep)[m
+[32m+[m		[32mprint os.getpid(), self.i, "x"[m
+[32m+[m		[32mreturn "Hello World %s" % self.i[m
+[32m+[m
+[32m+[m[32mapplication = Application()[m
+[32m+[m[32muwsgi.atexit = application.cleanup[m
+[32m+[m[32matexit.register(myExit)[m
+[32m+[m[32m# h = handler()[m
+[32m+[m[32m# handler.old = signal.getsignal(9)[m
+[32m+[m[32m# signal.signal(9, h.handle)[m
+[32m+[m
+[32m+[m[32msignal._old = signal.getsignal(9)[m
+[32m+[m[32muwsgi.register_signal(9, "workers", myHandle)[m
+[32m+[m[32m# signal.signal(15, myHandle)[m
+[1mdiff --git a/wordCount.py b/wordCount.py[m
+[1mindex e3454d9..6db9a9e 100755[m
+[1m--- a/wordCount.py[m
+[1m+++ b/wordCount.py[m
+[36m@@ -37,8 +37,8 @@[m [mfrom pyspark.streaming.kafka import KafkaUtils[m
+ from pyspark.sql import SQLContext[m
+ [m
+ [m
+[31m-def myPrint(rdd):[m
+[31m-    print("-------------------------------------------\n %s \n-------------------------------------------\n" % rdd.count())[m
+[32m+[m[32mdef myPrint(msg):[m
+[32m+[m[32m    print("\n-------------------------------------------\n %s\n-------------------------------------------\n" % msg)[m
+ [m
+ class saver(object):[m
+     def __init__(self, sqlc):[m
+[36m@@ -48,7 +48,7 @@[m [mclass saver(object):[m
+ [m
+     def saveRdd(self, rdd, moar=None):[m
+         if not rdd.count():[m
+[31m-            print('Empty set - nothing to save!\n')[m
+[32m+[m[32m            myPrint('Empty set - nothing to save!')[m
+             return[m
+         df = self.sqlc.createDataFrame(rdd, ['word', 'count'])[m
+         # df.write.jdbc([m
+[36m@@ -59,9 +59,11 @@[m [mclass saver(object):[m
+         list = df.collect()[m
+         for x in list:[m
+             que = 'INSERT INTO test.words (word, count) VALUES ("%s", %s) ON DUPLICATE KEY UPDATE count = count + %s' % (x[0], x[1], x[1])[m
+[31m-            #que = 'INSERT INTO test.word (word, count) VALUES ("%s", %s)' % (x[0], x[1])[m
+[31m-            print(que)[m
+[32m+[m[32m            # que = 'INSERT INTO test.word (word, count) VALUES ("%s", %s)' % (x[0], x[1])[m
+[32m+[m[32m            # print(que)[m
+             self.cursor.execute(que)[m
+[32m+[m[32m        myPrint("%s messages" % len(list))[m
+[32m+[m
+ [m
+         self.connection.commit()[m
+ [m

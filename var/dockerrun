@@ -1,0 +1,17 @@
+# run remotely accessible docker on cassandra 1
+docker daemon -H 172.16.60.80:4242 &
+
+# run kafka 1
+docker run --name="kafka1" -d -p 172.16.60.80:9092:9092 -e "KAFKA_ADVERTISED_PORT=9092" -e "KAFKA_BROKER_ID=1" -e "KAFKA_ZOOKEEPER_CONNECT=172.16.60.80:2181,172.16.60.81:2181,172.16.60.82:2181" -e "KAFKA_ADVERTISED_HOST_NAME=172.16.60.80" kafka_kafka
+
+# run kafka 2
+docker run -d -p 172.16.60.81:9092:9092 -e "KAFKA_ADVERTISED_PORT=9092" -e "KAFKA_BROKER_ID=2" -e "KAFKA_ZOOKEEPER_CONNECT=172.16.60.80:2181" -e "KAFKA_ADVERTISED_HOST_NAME=172.16.60.81" --name kafka_2 kafka_kafka
+
+# connect to kafka_1 !!! remember to quit by ctrl+p ctrl+q - exit kills the container
+docker exec -it kafka_1 bash
+
+# run zookeeper on cassandra 1
+docker run --name="zk1" --net="host" -d -e "ZK_SERVERS=server.1=172.16.60.80:2888:3888 server.2=172.16.60.81:2888:3888 server.3=172.16.60.82:2888:3888" -e "ZK_SERVER_ID=1" performio/zookeeper
+
+# run spark master
+docker run --name="spark-master1" -e "RUN_MASTER=1" -e "SPARK_MASTER_IP=cassandra1" -e "ZK_ENSAMBLE_IP=172.16.60.80:2888,172.16.60.81:2888,172.16.60.82:2888" -it --entrypoint="/bin/bash" performio/spark
