@@ -16,4 +16,4 @@ docker run --name="spark-master$SERVER_NO" --net="host" -d -e "RUN_MASTER=1" -e 
 
 #run spark-worker
 SPARK_POOL="172.16.60.80:7077,172.16.60.81:7077,172.16.60.82:7077"
-docker run --name="spark-worker$SERVER_NO" -d -e "RUN_WORKER=1" -e "SPARK_MASTER_IP=$SPARK_POOL" performio/spark
+docker run --name="spark-worker$SERVER_NO" --net="host" -d -e "RUN_WORKER=1" -e "SPARK_MASTER_IP=$SPARK_POOL" performio/spark
