@@ -10,3 +10,10 @@ docker run --name="zk$SERVER_NO" --net="host" -d -e "ZK_SERVERS=$ZK_SERVERS" -e 
 # run kafka
 ZK_POOL="172.16.60.80:2181,172.16.60.81:2181,172.16.60.82:2181"
 docker run --name="kafka$SERVER_NO" -d -p $SERVER_IP:9092:9092 -e "KAFKA_ADVERTISED_PORT=9092" -e "KAFKA_BROKER_ID=$SERVER_NO" -e "KAFKA_ZOOKEEPER_CONNECT=$ZK_POOL" -e "KAFKA_ADVERTISED_HOST_NAME=$SERVER_IP" kafka_kafka
+
+#run spark-master
+docker run --name="spark-master$SERVER_NO" --net="host" -d -e "RUN_MASTER=1" -e "SPARK_MASTER_IP=$SERVER_IP" -e "ZK_ENSAMBLE_IP=$ZK_POOL" performio/spark
+
+#run spark-worker
+SPARK_POOL="172.16.60.80:7077,172.16.60.81:7077,172.16.60.82:7077"
+docker run --name="spark-worker$SERVER_NO" -d -e "RUN_WORKER=1" -e "SPARK_MASTER_IP=$SPARK_POOL" performio/spark
