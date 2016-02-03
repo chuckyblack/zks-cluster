@@ -14,4 +14,7 @@ docker exec -it kafka_1 bash
 docker run --name="zk1" --net="host" -d -e "ZK_SERVERS=server.1=172.16.60.80:2888:3888 server.2=172.16.60.81:2888:3888 server.3=172.16.60.82:2888:3888" -e "ZK_SERVER_ID=1" performio/zookeeper
 
 # run spark master
-docker run --name="spark-master1" -e "RUN_MASTER=1" -e "SPARK_MASTER_IP=cassandra1" -e "ZK_ENSAMBLE_IP=172.16.60.80:2888,172.16.60.81:2888,172.16.60.82:2888" -it --entrypoint="/bin/bash" performio/spark
+docker run --name="spark-master1" -e "RUN_MASTER=1" -e "SPARK_MASTER_IP=cassandra1" -e "ZK_ENSAMBLE_IP=1172.16.60.80:2888,172.16.60.81:2888,172.16.60.82:288872.16.60.80:2888,172.16.60.81:2888,172.16.60.82:2888" -it --entrypoint="/bin/bash" performio/spark
+
+#submit spark streaming program
+bin/spark-submit --packages org.apache.spark:spark-streaming-kafka_2.10:1.5.2 --master yarn ../kafka/wordCount.py test

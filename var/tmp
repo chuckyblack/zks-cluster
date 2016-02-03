@@ -9,13 +9,13 @@ cd /usr/local/hadoop/sbin
 
 # starting spark master and worker
 cd /usr/local/spark
-./sbin/start-master.shcd /usr/local/spark
 ./sbin/start-master.sh
 
 ./sbin/start-slave.sh spark://172.17.0.5:7077
 
 # submiting task to spark
 bin/spark-submit --packages org.apache.spark:spark-streaming-kafka_2.10:1.5.2 --master spark://172.17.0.4:7077 ../kafka-spark/wordCount.py 172.17.0.2:2181 test
+ps
 
 #build image
 sudo docker build -t performio/docker-spark .
